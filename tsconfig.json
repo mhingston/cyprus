@@ -1,0 +1,12 @@
+{
+    "compilerOptions": {
+      "rootDir": "./src",
+      "outDir": "./dist",
+      "allowJs": true,
+      "target": "es5",
+      "module": "none",
+      "moduleResolution": "node",
+      "sourceMap": true,
+      "pretty": true
+      }
+  }
