@@ -118,7 +118,7 @@
             {
                 if(this.requests[i].id === id)
                 {
-                    return this.requests.slice(i, 1)[0];
+                    return this.requests.splice(i, 1)[0];
                 }
             }
         }
