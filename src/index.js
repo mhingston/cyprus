@@ -47,7 +47,7 @@
 
         connect(callback)
         {
-            callback = typeof callback === 'function' ? callback : () => {};    
+            callback = typeof callback === 'function' ? callback : () => {};
             let resolved = false;
 
             return new Promise((resolve, reject) =>
@@ -59,25 +59,36 @@
                     return resolve(true);
                 }
 
-                this.ws = new WebSocket(this.config.url);
-                
-                if(!this.ws.on)
+                else if(!this.ws || this.ws.readyState !== STATUS.CONNECTING)
                 {
-                    this.ws.on = (event, callback) =>
+                    this.reconnect = true;
+                    this.ws = new WebSocket(this.config.url);
+
+                    if(!this.ws.on)
                     {
-                        if(event === 'connection')
-                        {
-                            event = 'open';
-                        }
-    
-                        this.ws[`on${event}`] = callback;
+                        this.ws.on = this.ws.addEventListener;
+                        this.ws.off = this.ws.removeEventListener;
                     }
                 }
 
-                this.ws.on('close', (event) =>
+                const messageFn = (event) => this.handleMessage(event);
+                
+                const openFn = (event) =>
                 {
+                    this.ws.off('open', openFn);
+                    logger.log('info', `Connection established.`);
+                    resolved = true;
+                    callback();
+                    return resolve(true);
+                };
+    
+                const closeFn = (event) =>
+                {
+                    this.ws.off('close', closeFn);
+                    this.ws.off('error', errorFn);
+                    this.ws.off('message', messageFn);
                     this.handleClose(event);
-
+    
                     if(!resolved)
                     {
                         resolved = true;
@@ -85,10 +96,11 @@
                         callback(error)
                         return resolve(error);
                     }
-                });
-
-                this.ws.on('error', (event) =>
+                };
+    
+                const errorFn = (event) =>
                 {
+                    this.ws.off('error', errorFn);
                     this.handleError(event);
                     
                     if(!resolved)
@@ -98,17 +110,12 @@
                         callback(error)
                         return resolve(error);
                     }
-                });
+                };
 
-                this.ws.on('message', (event) => this.handleMessage(event));
-    
-                this.ws.on('connection', (event) =>
-                {
-                    logger.log('info', `Connection established.`);
-                    resolved = true;
-                    callback();
-                    return resolve(true);
-                });
+                this.ws.on('close', closeFn);
+                this.ws.on('error', errorFn);
+                this.ws.on('open', openFn);
+                this.ws.on('message', messageFn);
             });
         }
 
@@ -160,10 +167,14 @@
 
         handleClose(event)
         {
-            logger.log('info', `Connection closed.`);
-            logger.log('info', `Retrying to connect in ${this.config.retryDelay/1000} seconds.`);
-            setTimeout(this.connect.bind(this), this.config.retryDelay);
-            this.timeoutRequest();
+            if(this.reconnect)
+            {
+                logger.log('info', `Connection closed.`);
+                logger.log('info', `Retrying to connect in ${this.config.retryDelay/1000} seconds.`);
+                setTimeout(this.connect.bind(this), this.config.retryDelay);
+                this.timeoutRequest();
+                this.reconnect = false;
+            }
         }
 
         handleError(event)

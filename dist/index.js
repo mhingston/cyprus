@@ -80,16 +80,26 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
                     callback();
                     return resolve(true);
                 }
-                _this.ws = new WebSocket(_this.config.url);
-                if (!_this.ws.on) {
-                    _this.ws.on = function (event, callback) {
-                        if (event === 'connection') {
-                            event = 'open';
-                        }
-                        _this.ws["on" + event] = callback;
-                    };
+                else if (!_this.ws || _this.ws.readyState !== STATUS.CONNECTING) {
+                    _this.reconnect = true;
+                    _this.ws = new WebSocket(_this.config.url);
+                    if (!_this.ws.on) {
+                        _this.ws.on = _this.ws.addEventListener;
+                        _this.ws.off = _this.ws.removeEventListener;
+                    }
                 }
-                _this.ws.on('close', function (event) {
+                var messageFn = function (event) { return _this.handleMessage(event); };
+                var openFn = function (event) {
+                    _this.ws.off('open', openFn);
+                    logger.log('info', "Connection established.");
+                    resolved = true;
+                    callback();
+                    return resolve(true);
+                };
+                var closeFn = function (event) {
+                    _this.ws.off('close', closeFn);
+                    _this.ws.off('error', errorFn);
+                    _this.ws.off('message', messageFn);
                     _this.handleClose(event);
                     if (!resolved) {
                         resolved = true;
@@ -97,8 +107,9 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
                         callback(error);
                         return resolve(error);
                     }
-                });
-                _this.ws.on('error', function (event) {
+                };
+                var errorFn = function (event) {
+                    _this.ws.off('error', errorFn);
                     _this.handleError(event);
                     if (!resolved) {
                         resolved = true;
@@ -106,20 +117,17 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
                         callback(error);
                         return resolve(error);
                     }
-                });
-                _this.ws.on('message', function (event) { return _this.handleMessage(event); });
-                _this.ws.on('connection', function (event) {
-                    logger.log('info', "Connection established.");
-                    resolved = true;
-                    callback();
-                    return resolve(true);
-                });
+                };
+                _this.ws.on('close', closeFn);
+                _this.ws.on('error', errorFn);
+                _this.ws.on('open', openFn);
+                _this.ws.on('message', messageFn);
             });
         };
         Cyprus.prototype.findRequest = function (id) {
             for (var i = this.requests.length - 1; i >= 0; i--) {
                 if (this.requests[i].id === id) {
-                    return this.requests.slice(i, 1)[0];
+                    return this.requests.splice(i, 1)[0];
                 }
             }
         };
@@ -147,10 +155,13 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
             return this.id++;
         };
         Cyprus.prototype.handleClose = function (event) {
-            logger.log('info', "Connection closed.");
-            logger.log('info', "Retrying to connect in " + this.config.retryDelay / 1000 + " seconds.");
-            setTimeout(this.connect.bind(this), this.config.retryDelay);
-            this.timeoutRequest();
+            if (this.reconnect) {
+                logger.log('info', "Connection closed.");
+                logger.log('info', "Retrying to connect in " + this.config.retryDelay / 1000 + " seconds.");
+                setTimeout(this.connect.bind(this), this.config.retryDelay);
+                this.timeoutRequest();
+                this.reconnect = false;
+            }
         };
         Cyprus.prototype.handleError = function (event) {
             logger.log('error', "Connection error.");
