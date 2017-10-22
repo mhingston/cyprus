@@ -1,6 +1,6 @@
 (() =>
 {
-    if(typeof module !== 'undefined' && module.exports && typeof process !== 'undefined' && typeof process.env !== 'undefined' && process.env.APP_ENV !== 'browser')
+    if(typeof module !== 'undefined' && module.exports)
     {
         if(!WebSocket)
         {

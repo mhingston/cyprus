@@ -131,12 +131,8 @@ This method takes an `Object` or an `Array` of `Objects` as below:
 
 * Supports JSON-RPC 2.0 **only**.
 * No errors (exceptions) are thrown from RPC calls. When an error occurs on the RPC server an RPC [Error object](http://www.jsonrpc.org/specification#error_object) is returned. Due to this when using the promises be aware that the resolved value will be `resultOrError`. See [the JSON-RPC 2.0 spec](http://www.jsonrpc.org/specification#response_object) for more information.
-* If using a bundler like webpack make sure you set `process.env.APP_ENV = 'browser'` to avoid trying to include [`ws`](https://github.com/websockets/ws) in the bundle.
+* If using webpack make sure you set `externals: ['ws']` in your webpack config to avoid warnings about missing dependencies. See [this issue](https://github.com/socketio/socket.io-client/issues/933) for more background.
 
 ```javascript
-new webpack.DefinePlugin({
-    'process.env': {
-        APP_ENV: 'browser'
-    }
-}),
+externals: ['ws']
 ```
