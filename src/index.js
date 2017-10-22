@@ -1,6 +1,6 @@
 (() =>
 {
-    if(typeof module !== 'undefined' && module.exports)
+    if(typeof module !== 'undefined' && module.exports && typeof process !== 'undefined' && typeof process.env !== 'undefined' && process.env.APP_ENV !== 'browser')
     {
         if(!WebSocket)
         {
@@ -15,7 +15,7 @@
         CLOSING: 2,
         CLOSED: 3
     };
-    const logger = {};
+    let logger = {};
 
     class Cyprus
     {
@@ -26,7 +26,12 @@
             this.config = config;
             this.VERSION = '2.0';
 
-            if(typeof config.logger === 'function')
+            if(config.logger && typeof config.logger.log === 'function')
+            {
+                logger = config.logger;
+            }
+
+            else if(typeof config.logger === 'function')
             {
                 logger.log = config.logger;
             }
