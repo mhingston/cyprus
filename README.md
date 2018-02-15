@@ -4,6 +4,8 @@
 
 For a JSON-RPC 2.0 server check out [ResPeCt](https://github.com/mhingston/respect).
 
+**UPDATE (2018-15-02): Deprecated in favour of [Jayson](https://github.com/mhingston/jayson).**
+
 ## Installation
 
     npm install mhingston/cyprus
